@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserLocation } from '../store/mapSlice';
 import "leaflet/dist/leaflet.css";
 
 
@@ -17,32 +19,38 @@ const CenterMapOnUser = ({ userPosition }) => {
 }
 
 export const MapComponent = () => {
-    const [userPosition, setUserPosition] = useState(null);
+    const dispatch = useDispatch(); 
+    const userLocation = useSelector((state) => state.map.userLocation);
+    // const [userPosition, setUserPosition] = useState(null);
 
     useEffect(() => {
-        if(navigator.geolocation)
-        {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const { latitude, longitude } = position.coords;
-                    setUserPosition([latitude, longitude]);
-                },
-                (error) => {
-                    console.error("Geolocation error:", error);
-                    setUserPosition([51.505, -0.09]);
-                }
-            );
-        }
-        else
-        {
-            console.error("Geolocation is not supported by this browser.");
-            setUserPosition([51.505, -0.09]);
-        }
-    }, []);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                dispatch(setUserLocation([latitude, longitude]));
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                dispatch(setUserLocation([51.505, -0.09]));
+            }
+        );
+    }, [dispatch]);
+
+    const MapCenterer = () => {
+        const map = useMap();
+    
+        useEffect(() => {
+          if (userLocation) {
+            map.setView(userLocation, 13);
+          }
+        }, [userLocation, map]);
+    
+        return null;
+    };
 
     return (
         <MapContainer 
-            center={userPosition || [51.505, -0.09]} 
+            center={userLocation || [51.505, -0.09]} 
             zoom={13} 
             style={{ height: "100vh" }}
         >
@@ -50,7 +58,7 @@ export const MapComponent = () => {
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             />
-            {userPosition && <CenterMapOnUser userPosition={userPosition} />}
+            <MapCenterer />
         </MapContainer>
     );
 };

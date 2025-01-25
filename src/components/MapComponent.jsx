@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { useDispatch, useSelector } from 'react-redux';
-import { setUserLocation, setCities } from '../store/mapSlice';
+import { setUserLocation, setCities, fetchWeatherData } from '../store/mapSlice';
 import { fetchCities } from '../api/overpassApi';
 import { CustomMarker } from './CustomMarker';
 import { BASE_ZOOM } from '../config';
@@ -43,6 +43,10 @@ const MapEventHandler = () => {
 
             dispatch({ type: "map/fetchCitiesRequest", payload: { bbox } });
 
+            if (cachedCities.length > 0) {
+                dispatch(fetchWeatherData());
+            }
+
             // try {
             //     const fetchedCities = await fetchCities(bbox);
 
@@ -67,6 +71,7 @@ export const MapComponent = () => {
     const dispatch = useDispatch();
     const userLocation = useSelector((state) => state.map.userLocation);
     const cities = useSelector((state) => state.map.cities);
+    // const weatherData = useSelector((state) => state.map.weatherData);
 
     useEffect(() => {
         navigator.geolocation.getCurrentPosition(
@@ -105,6 +110,12 @@ export const MapComponent = () => {
         }
     }, [userLocation, dispatch]);
 
+    useEffect(() => {
+        if (cities.length > 0) {
+            dispatch(fetchWeatherData());
+        }
+    }, [cities, dispatch]);
+
     return (
         <MapContainer 
             center={userLocation || [51.505, -0.09]} 
@@ -119,9 +130,13 @@ export const MapComponent = () => {
                 <CustomMarker 
                     key={index} 
                     position={[city.lat, city.lon]} 
-                    cityName={city.name} 
+                    cityName={city.name}
+                    weather={city.weather}
                 />
             ))}
+            {/* {weatherData.map((data) => (
+                <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
+            ))} */}
             <MapCenterer userLocation={userLocation} />
             <MapEventHandler />
         </MapContainer>

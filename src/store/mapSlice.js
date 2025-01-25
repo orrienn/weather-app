@@ -3,6 +3,7 @@ import { createSlice } from '@reduxjs/toolkit';
 const initialState = {
     userLocation: null,
     cities: [],
+    weatherData: [],
     lastFetchTime: null,
     loading: false,
     error: null,
@@ -39,6 +40,13 @@ const mapSlice = createSlice({
             state.loading = false;
             state.error = action.payload;
         },
+        fetchWeatherData() {},
+        setWeatherData(state, action) {
+            state.weatherData = action.payload;
+        },
+        setWeatherError(state, action) {
+            state.weatherError = action.payload;
+        },
         
     },
 });
@@ -47,7 +55,10 @@ export const {
     setUserLocation, 
     setCities ,
     fetchCitiesRequest,
-    fetchCitiesFailed
+    fetchCitiesFailed,
+    fetchWeatherData,
+    setWeatherData,
+    setWeatherError,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;

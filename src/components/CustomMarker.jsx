@@ -2,19 +2,30 @@ import React from "react";
 import { Marker, Popup } from "react-leaflet";
 import L from "leaflet";
 
-// Stwórz niestandardową ikonę
-const customIcon = new L.Icon({
-    iconUrl: "https://cdn-icons-png.flaticon.com/512/1116/1116453.png",
-    iconSize: [25, 25],
-    iconAnchor: [12, 25],
-    popupAnchor: [0, -20],
-});
+export const CustomMarker = ({ position, cityName, weather }) => {
+    const icon = L.icon({
+        iconUrl: weather?.icon || "default-marker.png",
+        iconSize: [30, 30],
+    });
 
-export const CustomMarker = ({ position, cityName }) => {
     return (
-        <Marker position={position} icon={customIcon}>
+        <Marker position={position} icon={icon}>
             <Popup>
-                <strong>{cityName}</strong>
+                <div>
+                    <h3>{cityName}</h3>
+                    {weather ? (
+                        <div>
+                            <p>
+                                <strong>Temperature:</strong> {weather.temperature}°C
+                            </p>
+                            <p>
+                                <strong>Condition:</strong> {weather.condition}
+                            </p>
+                        </div>
+                    ) : (
+                        <p>Loading weather data...</p>
+                    )}
+                </div>
             </Popup>
         </Marker>
     );

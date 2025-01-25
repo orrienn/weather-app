@@ -38,19 +38,24 @@ const MapEventHandler = () => {
                 east: bounds.getEast(),
             };
 
-            try {
-                const fetchedCities = await fetchCities(bbox);
+            const now = Date.now();
+            const oneHour = 60 * 60 * 1000;
 
-                const newCities = fetchedCities.filter(
-                    (city) => !cachedCities.some((cachedCity) => cachedCity.id === city.id)
-                );
+            dispatch({ type: "map/fetchCitiesRequest", payload: { bbox } });
 
-                if (newCities.length > 0) {
-                    dispatch(setCities(newCities));
-                }
-            } catch (error) {
-                console.error("Failed to fetch cities:", error);
-            }
+            // try {
+            //     const fetchedCities = await fetchCities(bbox);
+
+            //     const newCities = fetchedCities.filter(
+            //         (city) => !cachedCities.some((cachedCity) => cachedCity.id === city.id)
+            //     );
+
+            //     if (newCities.length > 0) {
+            //         dispatch(setCities(newCities));
+            //     }
+            // } catch (error) {
+            //     console.error("Failed to fetch cities:", error);
+            // }
         },
     });
 
@@ -79,19 +84,21 @@ export const MapComponent = () => {
     useEffect(() => {
         if (userLocation) {
             const fetchInitialCities = async () => {
-                try {
-                    const bounds = {
-                        south: userLocation[0] - 1,
-                        west: userLocation[1] - 1,
-                        north: userLocation[0] + 1,
-                        east: userLocation[1] + 1,
-                    };
+                const bounds = {
+                    south: userLocation[0] - 1,
+                    west: userLocation[1] - 1,
+                    north: userLocation[0] + 1,
+                    east: userLocation[1] + 1,
+                };
 
-                    const fetchedCities = await fetchCities(bounds);
-                    dispatch(setCities(fetchedCities));
-                } catch (error) {
-                    console.error("Failed to fetch initial cities:", error);
-                }
+                dispatch({ type: "map/fetchCitiesRequest", payload: { bbox: bounds } });
+
+                // try {
+                //     const fetchedCities = await fetchCities(bounds);
+                //     dispatch(setCities(fetchedCities));
+                // } catch (error) {
+                //     console.error("Failed to fetch initial cities:", error);
+                // }
             };
 
             fetchInitialCities();

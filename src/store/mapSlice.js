@@ -4,6 +4,8 @@ const initialState = {
     userLocation: null,
     cities: [],
     lastFetchTime: null,
+    loading: false,
+    error: null,
 };
 
 const mapSlice = createSlice({
@@ -15,20 +17,37 @@ const mapSlice = createSlice({
         },
         setCities(state, action) {
             const newCities = action.payload;
-        
+
             const updatedCities = [
                 ...state.cities,
                 ...newCities.filter(
-                    (newCity) => !state.cities.some((existingCity) => existingCity.id === newCity.id)
+                    (newCity) =>
+                        !state.cities.some(
+                            (existingCity) => existingCity.id === newCity.id
+                        )
                 ),
             ];
-        
+
             state.cities = updatedCities;
             state.lastFetchTime = Date.now();
+            state.loading = false;
+        },
+        fetchCitiesRequest(state) {
+            state.loading = true;
+        },
+        fetchCitiesFailed(state, action) {
+            state.loading = false;
+            state.error = action.payload;
         },
         
     },
 });
 
-export const { setUserLocation, setCities } = mapSlice.actions;
+export const { 
+    setUserLocation, 
+    setCities ,
+    fetchCitiesRequest,
+    fetchCitiesFailed
+} = mapSlice.actions;
+
 export default mapSlice.reducer;

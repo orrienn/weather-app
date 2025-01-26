@@ -1,3 +1,6 @@
-export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
-export const WEATHER_API_URL = 'https://api.weatherapi.com/v1/current.json';
-export const BASE_ZOOM = 10;
+export const mapConfig = {
+    width: "90%",
+    height: "550px",
+    border: "2px solid #ccc",
+    borderRadius: "10px",
+};

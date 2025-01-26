@@ -1,4 +1,4 @@
-import { WEATHER_API_URL } from "../config";
+import { WEATHER_API_URL } from "../const.js";
 import { WEATHER_API_KEY } from "../key.js";
 
 export const fetchWeather = async (cities) => {

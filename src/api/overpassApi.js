@@ -1,4 +1,4 @@
-import { OVERPASS_URL } from "../config"; 
+import { OVERPASS_URL } from "../const"; 
 
 export const fetchCities = async (bbox) => {
     const query = `

@@ -5,7 +5,9 @@ import { setUserLocation, setCities, fetchWeatherData } from '../store/mapSlice'
 import { fetchCities } from '../api/overpassApi';
 import { CustomMarker } from './CustomMarker';
 import { CenterButton } from './CenterButton';
+import { ThemeToggleButton } from './ThemeToggleButton';
 import { MapCenterer } from './MapCenterer';
+import { MapWrapper } from './MapWrapper';
 import { BASE_ZOOM } from '../const';
 import "leaflet/dist/leaflet.css";
 
@@ -60,6 +62,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
     const userLocation = useSelector((state) => state.map.userLocation);
     const cities = useSelector((state) => state.map.cities);
     const mapCentererRef = useRef();
+    const isDarkMode = useSelector((state) => state.theme.isDarkMode);
     // const weatherData = useSelector((state) => state.map.weatherData);
 
     const handleCenterMap = () => {
@@ -112,31 +115,41 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
     }, [cities, dispatch]);
 
     return (
-        <div style={{ width, height, border, borderRadius, overflow: "hidden" }}>
-            <MapContainer 
-                center={userLocation || [51.505, -0.09]} 
-                zoom={BASE_ZOOM} 
-                style={{ height: "100vh" }}
-            >
-                <TileLayer
-                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                />
-                {cities.map((city, index) => (
-                    <CustomMarker 
-                        key={index} 
-                        position={[city.lat, city.lon]} 
-                        cityName={city.name}
-                        weather={city.weather}
+        // <div style={{ width, height, border, borderRadius, overflow: "hidden" }}>
+            <MapWrapper>
+                <MapContainer 
+                    center={userLocation || [51.505, -0.09]} 
+                    zoom={BASE_ZOOM} 
+                    style={{ height: "100vh" }}
+                >
+                    {isDarkMode ? (
+                    <TileLayer
+                        url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
-                ))}
-                {/* {weatherData.map((data) => (
-                    <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
-                ))} */}
-                <MapCenterer ref={mapCentererRef} userLocation={userLocation} />
-                <MapEventHandler />
-            </MapContainer>
-            <CenterButton onClick={handleCenterMap} />
-        </div>
+                    ) : (
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                    )}
+                    {cities.map((city, index) => (
+                        <CustomMarker 
+                            key={index} 
+                            position={[city.lat, city.lon]} 
+                            cityName={city.name}
+                            weather={city.weather}
+                        />
+                    ))}
+                    {/* {weatherData.map((data) => (
+                        <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
+                    ))} */}
+                    <MapCenterer ref={mapCentererRef} userLocation={userLocation} />
+                    <MapEventHandler />
+                </MapContainer>
+                <CenterButton onClick={handleCenterMap} />
+                <ThemeToggleButton />
+            </MapWrapper>
+        //</div>
     );
 };

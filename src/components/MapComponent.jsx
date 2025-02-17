@@ -10,8 +10,10 @@ import { ThemeToggleButton } from './ThemeToggleButton';
 import { MapCenterer } from './MapCenterer';
 import { MapWrapper } from './MapWrapper';
 import { LoadingBarComponent } from './LoadingBar';
+import { selectFilteredCities } from '../store/selector';
 import { BASE_ZOOM } from '../const';
 import "leaflet/dist/leaflet.css";
+import { FilterPanel } from './FilterPanel';
 
 
 const MapEventHandler = () => {
@@ -67,6 +69,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
     const isDarkMode = useSelector((state) => state.theme.isDarkMode);
     const weatherData = useSelector((state) => state.weather.weatherData);
     const isLoading = useSelector((state) => state.map.loading || state.weather.loading);
+    const filteredCities = useSelector(selectFilteredCities);
 
     const handleCenterMap = () => {
         if (mapCentererRef.current) {
@@ -143,7 +146,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
                         weather={city.weather}
                     />
                 ))} */}
-                {cities.map((city, index) => {
+                {filteredCities.map((city, index) => {
                     const weather = weatherData[city.id];
                     return (
                         <CustomMarker 
@@ -163,6 +166,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
             </MapContainer>
             <CenterButton onClick={handleCenterMap} />
             <ThemeToggleButton />
+            <FilterPanel />
             {isLoading && <LoadingBarComponent />}
         </MapWrapper>
     );

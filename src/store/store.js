@@ -3,6 +3,7 @@ import { combineEpics, createEpicMiddleware } from "redux-observable";
 import mapReducer from "./mapSlice";
 import themeReducer from './themeSlice';
 import weatherReducer from './weatherSlice';
+import filterReducer from './filterSlice';
 import { cityEpic } from "../epics/cityEpic";
 import { weatherEpic } from "../epics/weatherEpic";
 
@@ -14,6 +15,7 @@ const store = configureStore({
         map: mapReducer,
         theme: themeReducer,
         weather: weatherReducer,
+        filter: filterReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({ thunk: false }).concat(epicMiddleware),

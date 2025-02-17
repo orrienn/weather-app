@@ -9,6 +9,7 @@ import { CenterButton } from './CenterButton';
 import { ThemeToggleButton } from './ThemeToggleButton';
 import { MapCenterer } from './MapCenterer';
 import { MapWrapper } from './MapWrapper';
+import { LoadingBarComponent } from './LoadingBar';
 import { BASE_ZOOM } from '../const';
 import "leaflet/dist/leaflet.css";
 
@@ -65,6 +66,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
     const mapCentererRef = useRef();
     const isDarkMode = useSelector((state) => state.theme.isDarkMode);
     const weatherData = useSelector((state) => state.weather.weatherData);
+    const isLoading = useSelector((state) => state.map.loading || state.weather.loading);
 
     const handleCenterMap = () => {
         if (mapCentererRef.current) {
@@ -116,53 +118,52 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
     }, [cities, dispatch]);
 
     return (
-        // <div style={{ width, height, border, borderRadius, overflow: "hidden" }}>
-            <MapWrapper>
-                <MapContainer 
-                    center={userLocation || [51.505, -0.09]} 
-                    zoom={BASE_ZOOM} 
-                    style={{ height: "100vh" }}
-                >
-                    {isDarkMode ? (
+        <MapWrapper>
+            <MapContainer 
+                center={userLocation || [51.505, -0.09]} 
+                zoom={BASE_ZOOM} 
+                style={{ height: "100vh" }}
+            >
+                {isDarkMode ? (
+                <TileLayer
+                    url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+                    attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                ) : (
                     <TileLayer
-                        url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                        attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
-                    ) : (
-                        <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                        />
-                    )}
-                    {/* {cities.map((city, index) => (
+                )}
+                {/* {cities.map((city, index) => (
+                    <CustomMarker 
+                        key={index} 
+                        position={[city.lat, city.lon]} 
+                        cityName={city.name}
+                        weather={city.weather}
+                    />
+                ))} */}
+                {cities.map((city, index) => {
+                    const weather = weatherData[city.id];
+                    return (
                         <CustomMarker 
                             key={index} 
                             position={[city.lat, city.lon]} 
                             cityName={city.name}
-                            weather={city.weather}
+                            weather={weather}
+                            weatherScore={weather?.isNice}
                         />
-                    ))} */}
-                    {cities.map((city, index) => {
-                        const weather = weatherData[city.id];
-                        return (
-                            <CustomMarker 
-                                key={index} 
-                                position={[city.lat, city.lon]} 
-                                cityName={city.name}
-                                weather={weather}
-                                weatherScore={weather?.isNice}
-                            />
-                        );
-                    })}
-                    {/* {weatherData.map((data) => (
-                        <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
-                    ))} */}
-                    <MapCenterer ref={mapCentererRef} userLocation={userLocation} />
-                    <MapEventHandler />
-                </MapContainer>
-                <CenterButton onClick={handleCenterMap} />
-                <ThemeToggleButton />
-            </MapWrapper>
-        //</div>
+                    );
+                })}
+                {/* {weatherData.map((data) => (
+                    <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
+                ))} */}
+                <MapCenterer ref={mapCentererRef} userLocation={userLocation} />
+                <MapEventHandler />
+            </MapContainer>
+            <CenterButton onClick={handleCenterMap} />
+            <ThemeToggleButton />
+            {isLoading && <LoadingBarComponent />}
+        </MapWrapper>
     );
 };

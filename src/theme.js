@@ -11,7 +11,7 @@ export const lightTheme = {
 export const darkTheme = {
     bodyBackground: '#121212',
     textColor: '#ffffff',
-    buttonBackground: '#333333',
+    buttonBackground: '#c9c9c9',
     buttonText: '#ffffff',
     buttonHover: '#555555',
     popupBackground: '#333333',

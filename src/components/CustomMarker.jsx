@@ -5,7 +5,7 @@ import L from "leaflet";
 export const CustomMarker = ({ position, cityName, weather }) => {
     const icon = L.icon({
         iconUrl: weather?.icon || "default-marker.png",
-        iconSize: [30, 30],
+        iconSize: [40, 40],
     });
 
     return (

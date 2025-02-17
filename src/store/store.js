@@ -2,6 +2,7 @@ import { configureStore } from "@reduxjs/toolkit";
 import { combineEpics, createEpicMiddleware } from "redux-observable";
 import mapReducer from "./mapSlice";
 import themeReducer from './themeSlice';
+import weatherReducer from './weatherSlice';
 import { cityEpic } from "../epics/cityEpic";
 import { weatherEpic } from "../epics/weatherEpic";
 
@@ -12,6 +13,7 @@ const store = configureStore({
     reducer: {
         map: mapReducer,
         theme: themeReducer,
+        weather: weatherReducer,
     },
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({ thunk: false }).concat(epicMiddleware),

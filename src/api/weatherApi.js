@@ -11,27 +11,26 @@ export const fetchWeather = async (cities) => {
         }
 
         const data = await response.json();
-        console.log(JSON.stringify(data , null, 2));
-        console.log(isWeatherNice(data));
+        const { current } = data;
         return {
             id: city.id,
-            weather: data.current.condition.text,
-            temperature: data.current.temp_c,
-            isNice: isWeatherNice(data),
+            name: city.name,
+            condition: current.condition.text,
+            temperature: current.temp_c,
+            icon: current.condition.icon,
+            isNice: isWeatherNice(current),
         };
     });
 
     return Promise.all(weatherPromises);
 };
 
-
-// fix this ig
-const isWeatherNice = (data) => {
-    const { current } = data;
+const isWeatherNice = (current) => {
     const temp = current.temp_c;
-    const hasNoRain = !current.some((w) => current.condition.text.toLowerCase().includes("rain"));
+    const hasNoRain = !current.condition.text.toLowerCase().includes("rain");
     return {
         isNice: temp >= 18 && temp <= 25 && hasNoRain,
         isPassable: temp >= 18 && temp <= 25 || hasNoRain,
+        isBad: temp < 18 || temp > 25 || !hasNoRain,
     };
 };

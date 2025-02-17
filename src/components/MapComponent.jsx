@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import { useDispatch, useSelector } from 'react-redux';
-import { setUserLocation, setCities, fetchWeatherData } from '../store/mapSlice';
+import { setUserLocation, setCities } from '../store/mapSlice';
+import { fetchWeatherData } from '../store/weatherSlice';
 import { fetchCities } from '../api/overpassApi';
 import { CustomMarker } from './CustomMarker';
 import { CenterButton } from './CenterButton';
@@ -63,7 +64,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
     const cities = useSelector((state) => state.map.cities);
     const mapCentererRef = useRef();
     const isDarkMode = useSelector((state) => state.theme.isDarkMode);
-    // const weatherData = useSelector((state) => state.map.weatherData);
+    const weatherData = useSelector((state) => state.weather.weatherData);
 
     const handleCenterMap = () => {
         if (mapCentererRef.current) {
@@ -133,14 +134,25 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
                             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                         />
                     )}
-                    {cities.map((city, index) => (
+                    {/* {cities.map((city, index) => (
                         <CustomMarker 
                             key={index} 
                             position={[city.lat, city.lon]} 
                             cityName={city.name}
                             weather={city.weather}
                         />
-                    ))}
+                    ))} */}
+                    {cities.map((city, index) => {
+                        const weather = weatherData[city.id];
+                        return (
+                            <CustomMarker 
+                                key={index} 
+                                position={[city.lat, city.lon]} 
+                                cityName={city.name}
+                                weather={weather}
+                            />
+                        );
+                    })}
                     {/* {weatherData.map((data) => (
                         <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
                     ))} */}

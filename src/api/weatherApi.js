@@ -18,19 +18,22 @@ export const fetchWeather = async (cities) => {
             condition: current.condition.text,
             temperature: current.temp_c,
             icon: current.condition.icon,
-            isNice: isWeatherNice(current),
+            isNice: getWeatherScore(current),
         };
     });
 
     return Promise.all(weatherPromises);
 };
 
-const isWeatherNice = (current) => {
+const getWeatherScore = (current) => {
     const temp = current.temp_c;
-    const hasNoRain = !current.condition.text.toLowerCase().includes("rain");
-    return {
-        isNice: temp >= 18 && temp <= 25 && hasNoRain,
-        isPassable: temp >= 18 && temp <= 25 || hasNoRain,
-        isBad: temp < 18 || temp > 25 || !hasNoRain,
-    };
+    const hasRain = current.condition.text.toLowerCase().includes("rain");
+
+    if (temp >= 18 && temp <= 25 && !hasRain) {
+        return 2;
+    } else if (temp >= 18 && temp <= 25 || !hasRain) {
+        return 1;
+    } else {
+        return 0;
+    }
 };

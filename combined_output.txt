@@ -1,0 +1,751 @@
+
+
+// ======= ./src/main.jsx =======
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { Provider } from 'react-redux'
+import './index.css'
+import { App } from './App.jsx'
+import store from './store/store.js'
+
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <Provider store={store}>
+      <App />
+    </Provider>
+  </StrictMode>,
+)
+
+
+// ======= ./src/api/weatherApi.js =======
+import { WEATHER_API_URL } from "../const.js";
+import { WEATHER_API_KEY } from "../key.js";
+
+export const fetchWeather = async (cities) => {
+    const weatherPromises = cities.map(async (city) => {
+        const url = `${WEATHER_API_URL}?key=${WEATHER_API_KEY}&q=${city.lat},${city.lon}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch weather for city ${city.name}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        const { current } = data;
+        return {
+            id: city.id,
+            name: city.name,
+            condition: current.condition.text,
+            temperature: current.temp_c,
+            icon: current.condition.icon,
+            isNice: getWeatherScore(current),
+        };
+    });
+
+    return Promise.all(weatherPromises);
+};
+
+const getWeatherScore = (current) => {
+    const temp = current.temp_c;
+    const hasRain = current.condition.text.toLowerCase().includes("rain");
+
+    if (temp >= 18 && temp <= 25 && !hasRain) {
+        return 2;
+    } else if (temp >= 18 && temp <= 25 || !hasRain) {
+        return 1;
+    } else {
+        return 0;
+    }
+};
+
+
+// ======= ./src/api/overpassApi.js =======
+import { OVERPASS_URL } from "../const"; 
+
+export const fetchCities = async (bbox) => {
+    const query = `
+    [out:json];
+    node
+        ["place"="city"]
+        (${bbox.south},${bbox.west},${bbox.north},${bbox.east});
+    out;`;
+
+    const url = `${OVERPASS_URL}?data=${encodeURIComponent(query)}`;
+
+    const response = await fetch(url);
+    if(!response.ok)
+    {
+        throw new Error(`Failed to fetch cities: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log(JSON.stringify(data , null, 2));
+    return data.elements.map((element) => ({
+        id: element.id, 
+        name: element.tags.name,
+        population: element.tags.population ? parseInt(element.tags.population, 10) : null,
+        lat: element.lat,
+        lon: element.lon
+    }));
+};
+
+// ======= ./src/config.js =======
+export const mapConfig = {
+    width: "90%",
+    height: "550px",
+    border: "2px solid #ccc",
+    borderRadius: "10px",
+};
+
+// ======= ./src/key.js =======
+export const WEATHER_API_KEY = 'bedecec98cbb4f89921191527252501'
+
+// ======= ./src/index.css =======
+
+
+// ======= ./src/App.jsx =======
+import React from 'react'
+import './App.css'
+import { MapComponent } from './components'
+import { mapConfig } from './config'
+import { ThemeProvider as StyledThemeProvider } from 'styled-components';
+import { useSelector } from 'react-redux';
+import { lightTheme, darkTheme } from './theme';
+import { GlobalStyles } from './components/GlobalStyles';
+
+export const App = () => {
+    const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+
+    return (
+        <StyledThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+            <GlobalStyles />
+            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+                <MapComponent {...mapConfig}/>
+            </div>
+        </StyledThemeProvider>
+    );
+
+    // return (
+    //     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
+    //         <MapComponent {...mapConfig}/>
+    //     </div>
+    // )
+}
+
+// ======= ./src/theme.js =======
+export const lightTheme = {
+    bodyBackground: '#ffffff',
+    textColor: '#000000',
+    buttonBackground: '#007bff',
+    buttonText: '#ffffff',
+    buttonHover: '#0056b3',
+    popupBackground: '#ffffff',
+    popupText: '#000000',
+};
+
+export const darkTheme = {
+    bodyBackground: '#121212',
+    textColor: '#ffffff',
+    buttonBackground: '#333333',
+    buttonText: '#ffffff',
+    buttonHover: '#555555',
+    popupBackground: '#333333',
+    popupText: '#ffffff',
+};
+
+// ======= ./src/App.css =======
+
+
+// ======= ./src/epics/weatherEpic.js =======
+import { ofType } from "redux-observable";
+import { switchMap, map, catchError, debounceTime, withLatestFrom, tap } from "rxjs/operators";
+import { of, from } from "rxjs";
+import { fetchWeather } from "../api/weatherApi";
+import { fetchWeatherSuccess, fetchWeatherFailed } from "../store/weatherSlice";
+
+export const weatherEpic = (action$, state$) =>
+    action$.pipe(
+        ofType("map/setCities"),
+        debounceTime(500),
+        withLatestFrom(state$),
+        switchMap(([, state]) => {
+            console.log("Weather epic triggered");
+            const cities = state.map.cities;
+            return from(fetchWeather(cities)).pipe(
+                map((weatherData) => {
+                    return fetchWeatherSuccess(weatherData);
+                }),
+                catchError((error) => of(fetchWeatherFailed(error.message)))
+            );
+        })
+    );
+
+
+// ======= ./src/epics/cityEpic.js =======
+import { ofType } from "redux-observable";
+import { from, of } from "rxjs";
+import { mergeMap, map, catchError } from "rxjs/operators";
+import { fetchCities } from "../api/overpassApi";
+import { setCities } from "../store/mapSlice";
+
+export const cityEpic = (action$, state$) =>
+  action$.pipe(
+    ofType("map/fetchCitiesRequest"),
+    mergeMap((action) => {
+        const { bbox } = action.payload;
+
+        return from (fetchCities(bbox)).pipe(
+            map((cities) => setCities(cities)),
+            catchError((error) => {
+                console.error("Failed to fetch cities:", error);
+                return of();
+            })
+        );
+    })
+  );
+
+// ======= ./src/components/CenterButton.jsx =======
+import React from 'react';
+import styled from 'styled-components';
+
+const Button = styled.button`
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+
+    &:hover {
+        background-color: #0056b3;
+    }
+`;
+
+export const CenterButton = ({ onClick }) => {
+    return (
+        <Button onClick={onClick}>
+            📍
+        </Button>
+    );
+};
+
+// ======= ./src/components/index.jsx =======
+export { MapComponent } from './MapComponent'
+
+// ======= ./src/components/MapCenterer.jsx =======
+import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
+import { useMap } from 'react-leaflet';
+
+export const MapCenterer = forwardRef(({ userLocation }, ref) => {
+    const map = useMap();
+    const [hasCentered, setHasCentered] = useState(false);
+
+    const centerMap = () => {
+        if (userLocation) {
+            map.setView(userLocation, map.getZoom());
+        }
+    };
+
+    useImperativeHandle(ref, () => ({
+        centerMap,
+    }));
+
+    useEffect(() => {
+        if (userLocation && !hasCentered) {
+            centerMap();
+            setHasCentered(true);
+        }
+    }, [userLocation, map, hasCentered]);
+
+    return null;
+});
+
+// ======= ./src/components/GlobalStyles.js =======
+import { createGlobalStyle } from 'styled-components';
+
+export const GlobalStyles = createGlobalStyle`
+    body {
+        background-color: ${({ theme }) => theme.bodyBackground};
+        color: ${({ theme }) => theme.textColor};
+        transition: background-color 0.3s, color 0.3s;
+    }
+`;
+
+// ======= ./src/components/MapComponent.jsx =======
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, useMap, useMapEvents } from 'react-leaflet';
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserLocation, setCities } from '../store/mapSlice';
+import { fetchWeatherData } from '../store/weatherSlice';
+import { fetchCities } from '../api/overpassApi';
+import { CustomMarker } from './CustomMarker';
+import { CenterButton } from './CenterButton';
+import { ThemeToggleButton } from './ThemeToggleButton';
+import { MapCenterer } from './MapCenterer';
+import { MapWrapper } from './MapWrapper';
+import { BASE_ZOOM } from '../const';
+import "leaflet/dist/leaflet.css";
+
+
+const MapEventHandler = () => {
+    const dispatch = useDispatch();
+    const cachedCities = useSelector((state) => state.map.cities);
+
+    const map = useMapEvents({
+        moveend: async () => {
+            const bounds = map.getBounds();
+            if (!bounds) return;
+
+            const bbox = {
+                south: bounds.getSouth(),
+                west: bounds.getWest(),
+                north: bounds.getNorth(),
+                east: bounds.getEast(),
+            };
+
+            const now = Date.now();
+            const oneHour = 60 * 60 * 1000;
+
+            dispatch({ type: "map/fetchCitiesRequest", payload: { bbox } });
+
+            if (cachedCities.length > 0) {
+                dispatch(fetchWeatherData());
+            }
+
+            // try {
+            //     const fetchedCities = await fetchCities(bbox);
+
+            //     const newCities = fetchedCities.filter(
+            //         (city) => !cachedCities.some((cachedCity) => cachedCity.id === city.id)
+            //     );
+
+            //     if (newCities.length > 0) {
+            //         dispatch(setCities(newCities));
+            //     }
+            // } catch (error) {
+            //     console.error("Failed to fetch cities:", error);
+            // }
+        },
+    });
+
+    return null;
+};
+
+
+export const MapComponent = ({ width, height, border, borderRadius }) => {
+    const dispatch = useDispatch();
+    const userLocation = useSelector((state) => state.map.userLocation);
+    const cities = useSelector((state) => state.map.cities);
+    const mapCentererRef = useRef();
+    const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+    const weatherData = useSelector((state) => state.weather.weatherData);
+
+    const handleCenterMap = () => {
+        if (mapCentererRef.current) {
+            mapCentererRef.current.centerMap();
+        }
+    };
+
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { latitude, longitude } = position.coords;
+                dispatch(setUserLocation([latitude, longitude]));
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                dispatch(setUserLocation([51.505, -0.09]));
+            }
+        );
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (userLocation) {
+            const fetchInitialCities = async () => {
+                const bounds = {
+                    south: userLocation[0] - 1,
+                    west: userLocation[1] - 1,
+                    north: userLocation[0] + 1,
+                    east: userLocation[1] + 1,
+                };
+
+                dispatch({ type: "map/fetchCitiesRequest", payload: { bbox: bounds } });
+
+                // try {
+                //     const fetchedCities = await fetchCities(bounds);
+                //     dispatch(setCities(fetchedCities));
+                // } catch (error) {
+                //     console.error("Failed to fetch initial cities:", error);
+                // }
+            };
+
+            fetchInitialCities();
+        }
+    }, [userLocation, dispatch]);
+
+    useEffect(() => {
+        if (cities.length > 0) {
+            dispatch(fetchWeatherData());
+        }
+    }, [cities, dispatch]);
+
+    return (
+        // <div style={{ width, height, border, borderRadius, overflow: "hidden" }}>
+            <MapWrapper>
+                <MapContainer 
+                    center={userLocation || [51.505, -0.09]} 
+                    zoom={BASE_ZOOM} 
+                    style={{ height: "100vh" }}
+                >
+                    {isDarkMode ? (
+                    <TileLayer
+                        url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+                        attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>, &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    />
+                    ) : (
+                        <TileLayer
+                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        />
+                    )}
+                    {/* {cities.map((city, index) => (
+                        <CustomMarker 
+                            key={index} 
+                            position={[city.lat, city.lon]} 
+                            cityName={city.name}
+                            weather={city.weather}
+                        />
+                    ))} */}
+                    {cities.map((city, index) => {
+                        const weather = weatherData[city.id];
+                        return (
+                            <CustomMarker 
+                                key={index} 
+                                position={[city.lat, city.lon]} 
+                                cityName={city.name}
+                                weather={weather}
+                                weatherScore={weather?.isNice}
+                            />
+                        );
+                    })}
+                    {/* {weatherData.map((data) => (
+                        <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
+                    ))} */}
+                    <MapCenterer ref={mapCentererRef} userLocation={userLocation} />
+                    <MapEventHandler />
+                </MapContainer>
+                <CenterButton onClick={handleCenterMap} />
+                <ThemeToggleButton />
+            </MapWrapper>
+        //</div>
+    );
+};
+
+
+// ======= ./src/components/ThemeToggleButton.jsx =======
+import React from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { toggleTheme } from '../store/themeSlice';
+import styled from 'styled-components';
+
+const Button = styled.button`
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background-color: ${({ theme }) => theme.buttonBackground};
+    color: ${({ theme }) => theme.buttonText};
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+
+    &:hover {
+        background-color: ${({ theme }) => theme.buttonHover};
+    }
+`;
+
+export const ThemeToggleButton = () => {
+    const dispatch = useDispatch();
+    const isDarkMode = useSelector((state) => state.theme.isDarkMode);
+
+    const handleToggleTheme = () => {
+        dispatch(toggleTheme());
+    };
+
+    return (
+        <Button onClick={handleToggleTheme}>
+            {isDarkMode ? '🌞' : '🌙'} {/* Ikona zależna od trybu */}
+        </Button>
+    );
+};
+
+// ======= ./src/components/CustomMarker.jsx =======
+import React from "react";
+import { Marker, Popup } from "react-leaflet";
+import L from "leaflet";
+
+export const CustomMarker = ({ position, cityName, weather, weatherScore }) => {
+    const emojiMap = {
+        2: "✅",
+        1: "☑️",
+        0: "❌",
+    };
+
+    const weatherEmoji = emojiMap[weatherScore] || "❓";
+
+    const iconHtml = `
+        <div style="position: relative; text-align: center;">
+            <img src="${weather?.icon || "default-marker.png"}" style="width: 40px; height: 40px;" />
+            <div style="
+                position: absolute;
+                top: -15px;
+                left: 50%;
+                transform: translateX(-50%);
+                font-size: 20px;
+            ">${weatherEmoji}</div>
+        </div>
+    `;
+
+    const icon = L.divIcon({
+        html: iconHtml,
+        className: "custom-marker",
+        iconSize: [40, 40],
+    });
+
+    return (
+        <Marker position={position} icon={icon}>
+            <Popup>
+                <div>
+                    <h3>{cityName}</h3>
+                    {weather ? (
+                        <div>
+                            <p>
+                                <strong>Temperature:</strong> {weather.temperature}°C
+                            </p>
+                            <p>
+                                <strong>Condition:</strong> {weather.condition}
+                            </p>
+                        </div>
+                    ) : (
+                        <p>Loading weather data...</p>
+                    )}
+                </div>
+            </Popup>
+        </Marker>
+    );
+};
+
+
+// ======= ./src/components/MapWrapper.jsx =======
+import styled from 'styled-components';
+
+export const MapWrapper = styled.div`
+    width: 100%;
+    height: 600px;
+    border: 2px solid #ccc;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+    background-color: ${({ theme }) => theme.bodyBackground};
+`;
+
+// ======= ./src/store/store.js =======
+import { configureStore } from "@reduxjs/toolkit";
+import { combineEpics, createEpicMiddleware } from "redux-observable";
+import mapReducer from "./mapSlice";
+import themeReducer from './themeSlice';
+import weatherReducer from './weatherSlice';
+import { cityEpic } from "../epics/cityEpic";
+import { weatherEpic } from "../epics/weatherEpic";
+
+const epicMiddleware = createEpicMiddleware();
+const rootEpic = combineEpics(cityEpic, weatherEpic);
+
+const store = configureStore({
+    reducer: {
+        map: mapReducer,
+        theme: themeReducer,
+        weather: weatherReducer,
+    },
+    middleware: (getDefaultMiddleware) =>
+        getDefaultMiddleware({ thunk: false }).concat(epicMiddleware),
+});
+
+epicMiddleware.run(rootEpic);
+
+export default store;
+
+// ======= ./src/store/weatherSlice.js =======
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+    weatherData: {},
+    loading: false,
+    error: null,
+    lastFetchTime: null,
+};
+
+const weatherSlice = createSlice({
+    name: 'weather',
+    initialState,
+    reducers: {
+        fetchWeatherData(state) {
+            state.loading = true;
+            state.error = null;
+        },
+        fetchWeatherSuccess(state, action) {
+            console.log("Weather data saved in state:", action.payload);
+            action.payload.forEach((weather) => {
+                state.weatherData[weather.id] = weather;
+            });
+            state.loading = false;
+            state.lastFetchTime = Date.now();
+        },
+        fetchWeatherFailed(state, action) {
+            state.loading = false;
+            state.error = action.payload;
+        },
+    },
+});
+
+export const { 
+    fetchWeatherData, 
+    fetchWeatherSuccess, 
+    fetchWeatherFailed 
+} = weatherSlice.actions;
+export default weatherSlice.reducer;
+
+// ======= ./src/store/themeSlice.js =======
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+    isDarkMode: false,
+};
+
+const themeSlice = createSlice({
+    name: 'theme',
+    initialState,
+    reducers: {
+        toggleTheme: (state) => {
+            state.isDarkMode = !state.isDarkMode;
+        },
+    },
+});
+
+export const { toggleTheme } = themeSlice.actions;
+export default themeSlice.reducer;
+
+// ======= ./src/store/mapSlice.js =======
+import { createSlice } from '@reduxjs/toolkit';
+
+const initialState = {
+    userLocation: null,
+    cities: [],
+    lastFetchTime: null,
+    loading: false,
+    error: null,
+};
+
+const mapSlice = createSlice({
+    name: 'map',
+    initialState,
+    reducers: {
+        setUserLocation(state, action) {
+            state.userLocation = action.payload;
+        },
+        setCities(state, action) {
+            const newCities = action.payload;
+
+            const updatedCities = [
+                ...state.cities,
+                ...newCities.filter(
+                    (newCity) =>
+                        !state.cities.some(
+                            (existingCity) => existingCity.id === newCity.id
+                        )
+                ),
+            ];
+
+            state.cities = updatedCities;
+            state.lastFetchTime = Date.now();
+            state.loading = false;
+        },
+        fetchCitiesRequest(state) {
+            state.loading = true;
+        },
+        fetchCitiesFailed(state, action) {
+            state.loading = false;
+            state.error = action.payload;
+        },
+    },
+});
+
+export const { 
+    setUserLocation, 
+    setCities ,
+    fetchCitiesRequest,
+    fetchCitiesFailed,
+} = mapSlice.actions;
+
+export default mapSlice.reducer;
+
+
+// ======= ./src/const.js =======
+export const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
+export const WEATHER_API_URL = 'https://api.weatherapi.com/v1/current.json';
+export const BASE_ZOOM = 10;
+
+// ======= ./eslint.config.js =======
+import js from '@eslint/js'
+import globals from 'globals'
+import react from 'eslint-plugin-react'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+
+export default [
+  { ignores: ['dist'] },
+  {
+    files: ['**/*.{js,jsx}'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+      parserOptions: {
+        ecmaVersion: 'latest',
+        ecmaFeatures: { jsx: true },
+        sourceType: 'module',
+      },
+    },
+    settings: { react: { version: '18.3' } },
+    plugins: {
+      react,
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      ...react.configs.recommended.rules,
+      ...react.configs['jsx-runtime'].rules,
+      ...reactHooks.configs.recommended.rules,
+      'react/jsx-no-target-blank': 'off',
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
+  },
+]

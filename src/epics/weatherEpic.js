@@ -11,7 +11,7 @@ export const weatherEpic = (action$, state$) =>
         withLatestFrom(state$),
         switchMap(([, state]) => {
             console.log("Weather epic triggered");
-            const cities = state.map.cities.slice(0, 20);
+            const cities = state.map.cities;
             return from(fetchWeather(cities)).pipe(
                 map((weatherData) => {
                     return fetchWeatherSuccess(weatherData);

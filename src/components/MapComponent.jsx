@@ -150,6 +150,7 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
                                 position={[city.lat, city.lon]} 
                                 cityName={city.name}
                                 weather={weather}
+                                weatherScore={weather?.isNice}
                             />
                         );
                     })}

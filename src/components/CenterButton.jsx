@@ -5,8 +5,8 @@ const Button = styled.button`
     position: fixed;
     bottom: 20px;
     right: 20px;
-    background-color: #007bff;
-    color: white;
+    background-color: ${({ theme }) => theme.buttonBackground};
+    color: ${({ theme }) => theme.buttonText};
     border: none;
     border-radius: 50%;
     width: 40px;
@@ -19,7 +19,7 @@ const Button = styled.button`
     z-index: 1000;
 
     &:hover {
-        background-color: #0056b3;
+        background-color: ${({ theme }) => theme.buttonHover};
     }
 `;
 

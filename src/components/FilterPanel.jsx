@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { setNameFilter, setPopulationRange } from '../store/filterSlice';
 import styled, { keyframes } from 'styled-components';
+import Slider from 'rc-slider';
+import 'rc-slider/assets/index.css';
 
 const slideOut = keyframes`
     from {
@@ -53,11 +55,6 @@ const Input = styled.input`
     box-sizing: border-box;
 `;
 
-const Slider = styled.input`
-    width: 100%;
-    margin-bottom: 8px;
-`;
-
 const RangeText = styled.div`
     display: flex;
     align-items: center;
@@ -103,7 +100,7 @@ export const FilterPanel = () => {
     const minPopulation = populationValues.length > 0 ? Math.min(...populationValues) : 0;
     const maxPopulation = populationValues.length > 0 ? Math.max(...populationValues) : 0;
 
-    const [localPopulationRange, setLocalPopulationRange] = useState([0, Infinity]);
+    const [localPopulationRange, setLocalPopulationRange] = useState([minPopulation, maxPopulation]);
 
     useEffect(() => {
         if (minPopulation !== 0 && maxPopulation !== 0) {
@@ -140,13 +137,11 @@ export const FilterPanel = () => {
                 {minPopulation !== 0 && maxPopulation !== 0 ? (
                     <>
                         <Slider
-                            type="range"
+                            range
                             min={minPopulation}
                             max={maxPopulation}
-                            value={localPopulationRange[1]}
-                            onChange={(e) =>
-                                setLocalPopulationRange([minPopulation, parseInt(e.target.value, 10)])
-                            }
+                            value={localPopulationRange}
+                            onChange={(value) => setLocalPopulationRange(value)}
                         />
                         <RangeText>
                             <span>Population:</span>

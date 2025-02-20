@@ -12,7 +12,7 @@ export const CustomMarker = ({ position, cityName, weather, weatherScore }) => {
     const desc_map = {
         2: "Nice",
         1: "Passable",
-        0: "Bad",
+        0: "Not Nice",
     };
 
     const weatherEmoji = emojiMap[weatherScore] || "❓";

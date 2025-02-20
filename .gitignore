@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 src/key.js
+.env
 
 # Editor directories and files
 .vscode/*

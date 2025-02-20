@@ -1,5 +1,4 @@
 import React from 'react'
-import './App.css'
 import { MapComponent } from './components'
 import { mapConfig } from './config'
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
@@ -18,10 +17,4 @@ export const App = () => {
             </div>
         </StyledThemeProvider>
     );
-
-    // return (
-    //     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>
-    //         <MapComponent {...mapConfig}/>
-    //     </div>
-    // )
 }

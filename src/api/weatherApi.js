@@ -1,9 +1,8 @@
 import { WEATHER_API_URL } from "../const.js";
-import { WEATHER_API_KEY } from "../key.js";
 
 export const fetchWeather = async (cities) => {
     const weatherPromises = cities.map(async (city) => {
-        const url = `${WEATHER_API_URL}?key=${WEATHER_API_KEY}&q=${city.lat},${city.lon}`;
+        const url = `${WEATHER_API_URL}?key=${import.meta.env.VITE_WEATHER_API_KEY}&q=${city.lat},${city.lon}`;
         const response = await fetch(url);
 
         if (!response.ok) {

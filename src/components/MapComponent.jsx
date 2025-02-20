@@ -40,20 +40,6 @@ const MapEventHandler = () => {
             if (cachedCities.length > 0) {
                 dispatch(fetchWeatherData());
             }
-
-            // try {
-            //     const fetchedCities = await fetchCities(bbox);
-
-            //     const newCities = fetchedCities.filter(
-            //         (city) => !cachedCities.some((cachedCity) => cachedCity.id === city.id)
-            //     );
-
-            //     if (newCities.length > 0) {
-            //         dispatch(setCities(newCities));
-            //     }
-            // } catch (error) {
-            //     console.error("Failed to fetch cities:", error);
-            // }
         },
     });
 
@@ -101,13 +87,6 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
                 };
 
                 dispatch({ type: "map/fetchCitiesRequest", payload: { bbox: bounds } });
-
-                // try {
-                //     const fetchedCities = await fetchCities(bounds);
-                //     dispatch(setCities(fetchedCities));
-                // } catch (error) {
-                //     console.error("Failed to fetch initial cities:", error);
-                // }
             };
 
             fetchInitialCities();
@@ -138,14 +117,6 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                     />
                 )}
-                {/* {cities.map((city, index) => (
-                    <CustomMarker 
-                        key={index} 
-                        position={[city.lat, city.lon]} 
-                        cityName={city.name}
-                        weather={city.weather}
-                    />
-                ))} */}
                 {filteredCities.map((city, index) => {
                     const weather = weatherData[city.id];
                     return (
@@ -158,9 +129,6 @@ export const MapComponent = ({ width, height, border, borderRadius }) => {
                         />
                     );
                 })}
-                {/* {weatherData.map((data) => (
-                    <CustomMarker key={data.id} position={[data.lat, data.lon]} weather={data} />
-                ))} */}
                 <MapCenterer ref={mapCentererRef} userLocation={userLocation} />
                 <MapEventHandler />
             </MapContainer>
